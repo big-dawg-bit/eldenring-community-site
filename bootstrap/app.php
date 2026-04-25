@@ -13,11 +13,14 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
-    ->withMiddleware(function (Middleware $middleware){
+    ->withMiddleware(function (Middleware $middleware) {
         // Register the admin middleware alias
         $middleware->alias([
             'admin' => \App\Http\Middleware\IsAdmin::class,
         ]);
+
+        // Append the security headers middleware to every response
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
