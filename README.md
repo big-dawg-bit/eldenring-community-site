@@ -1,33 +1,45 @@
 # Elden Ring Community Website
 
-Een community website voor Elden Ring fans, gebouwd met Laravel 11 en Tailwind CSS.
+Een community-platform voor Elden Ring spelers, gebouwd met Laravel 11, Inertia.js en Tailwind CSS. Het project combineert een publiek nieuwsoverzicht, een boss-database, een FAQ-systeem en een community-laag (comments, favorieten) met een volledig admin-paneel.
 
 ## Features
 
--  Nieuws artikelen met comments
--  Boss database met moeilijkheidsgraad indicators
--  FAQ systeem met categorieën
--  Favoriete bosses (Many-to-Many relatie)
--  User authenticatie met admin panel
--  Comment systeem op nieuws
--  Contact formulier
+### Publiek
+- Nieuwsoverzicht met detailpagina's en authenticated comments
+- Boss-database met moeilijkheidsgraad-indicatoren
+- FAQ-systeem georganiseerd per categorie
+- Contact-formulier
+- Authenticatie met registratie, login, password reset en email verification
 
-## Technische Requirements
+### Authenticated users
+- Profielpagina's
+- Comments achterlaten op nieuwsartikelen
+- Bosses toevoegen aan een persoonlijke favorietenlijst
+
+### Admin
+- Volledig admin-paneel met CRUD-operaties op users, news, bosses, FAQ-categorieën en FAQ-items
+- Toegangscontrole via een dedicated `IsAdmin` middleware
+
+## Technische stack
 
 - PHP 8.2 of hoger
-- Composer
-- MySQL/SQLite database
-- Node.js & NPM
+- Laravel 11
+- Inertia.js
+- Tailwind CSS
+- SQLite (lokaal) of MySQL (productie)
+- Node.js en npm voor asset-builds
 
-## Installatie Instructies
+## Lokale installatie
 
 ### 1. Clone de repository
+
 ```bash
-git clone <jouw-github-url>
-cd eldenring_site
+git clone https://github.com/big-dawg-bit/eldenring-community-site.git
+cd eldenring-community-site
 ```
 
 ### 2. Installeer dependencies
+
 ```bash
 composer install
 npm install
@@ -35,107 +47,109 @@ npm install
 
 ### 3. Environment configuratie
 
-Kopieer `.env.example` naar `.env`:
 ```bash
 cp .env.example .env
-```
-
-Genereer application key:
-```bash
 php artisan key:generate
 ```
 
-### 4. Database configuratie
+### 4. Database initialiseren
 
-Open `.env` en configureer je database:
-```env
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=eldenring_site
-DB_USERNAME=root
-DB_PASSWORD=
-```
+Voor lokale ontwikkeling staat SQLite standaard ingesteld in `.env.example`. Maak het database-bestand aan:
 
-Voor SQLite (simpeler):
-```env
-DB_CONNECTION=sqlite
-```
-
-En maak een leeg database bestand:
 ```bash
 touch database/database.sqlite
 ```
 
-### 5. Run migrations en seeders
+Voer migraties en seeders uit:
+
 ```bash
 php artisan migrate:fresh --seed
 ```
 
-Dit creëert:
-- Admin user: `admin@ehb.be` / `Password!321`
-- Test nieuws artikelen
-- Boss data
-- FAQ items en categorieën
+De seeders maken een admin-account, enkele test-users, FAQ-categorieën, FAQ-items, nieuwsartikelen en boss-data aan. De admin-credentials worden gegenereerd door `AdminUserSeeder` op basis van de waarden gedefinieerd in dat bestand. Open `database/seeders/AdminUserSeeder.php` om te zien welke credentials lokaal toegekend worden.
 
-### 6. Storage link
+### 5. Storage link
+
 ```bash
 php artisan storage:link
 ```
 
-### 7. Start de development server
+### 6. Start de development server
+
 ```bash
 php artisan serve
 ```
 
-Bezoek: `http://localhost:8000`
+Open een tweede terminal voor de asset-watcher:
 
-## Test Accounts
+```bash
+npm run dev
+```
 
-### Admin Account (vereist)
-- **Email:** admin@ehb.be
-- **Password:** Password!321
+De applicatie is bereikbaar op `http://localhost:8000`.
 
-### Test Users
-- **Email:** test@test.com / **Password:** password
-- **Email:** john@test.com / **Password:** password
+## Productie deployment
 
-## Project Structuur
+Productie-deployment vereist andere instellingen dan lokale ontwikkeling. Een aparte template hiervoor bevindt zich in `.env.production.example`. De belangrijkste verschillen worden hieronder opgesomd.
 
-- **Models:** User, News, Boss, Faq, FaqCategory, Comment
-- **Controllers:** Admin controllers voor CRUD operaties
-- **Views:** Blade templates met Tailwind CSS
-- **Middleware:** Auth en Admin middleware
-- **Seeders:** Database seeders voor test data
+### Verplichte stappen voor productie
 
-## Relaties
+1. Kopieer `.env.production.example` naar `.env` op de productie-server
+2. Genereer een nieuwe `APP_KEY` met `php artisan key:generate`
+3. Stel `APP_DEBUG=false` en `APP_ENV=production` in
+4. Configureer een productie-database (MySQL aanbevolen, geen SQLite)
+5. Configureer een echte SMTP-mailserver
+6. Stel `SESSION_SECURE_COOKIE=true` in (vereist HTTPS)
+7. Voer migraties uit met `php artisan migrate --force`
+8. Build de assets met `npm run build`
+9. Cache de configuratie:
 
-### One-to-Many
-- User → News (één user, meerdere nieuws artikelen)
-- User → Comments (één user, meerdere comments)
-- News → Comments (één nieuws artikel, meerdere comments)
-- FaqCategory → Faqs (één categorie, meerdere FAQs)
+```bash
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
 
-### Many-to-Many
-- User ↔ Boss (favoriete bosses via pivot table `boss_user`)
+10. Wijzig de admin-credentials onmiddellijk na de eerste login
+
+### Productie security checklist
+
+- HTTPS afgedwongen op alle routes (gebeurt automatisch via `AppServiceProvider`)
+- Security headers actief op alle responses (geleverd door `SecurityHeaders` middleware)
+- Rate limiting actief op login, register, contact, comments en password reset
+- Debug-routes verwijderd uit `routes/web.php`
+- Geen hardcoded credentials in repository of `.env.example`
+- Sessie-cookies versleuteld, secure en met `SameSite=strict`
+
+Een uitgebreid overzicht van security-maatregelen staat in `SECURITY.md`.
+
+## Project structuur
+
+### Models
+User, News, Boss, Faq, FaqCategory, Comment
+
+### Relaties
+**One-to-many:** User naar News, User naar Comments, News naar Comments, FaqCategory naar Faqs.
+**Many-to-many:** User naar Boss via een pivot-tabel `boss_user` voor favorieten.
+
+### Middleware
+`IsAdmin` controleert admin-rechten op admin-routes. `SecurityHeaders` voegt HTTP security headers toe aan elke response.
 
 ## Bronvermelding
 
-- **Laravel Framework:** https://laravel.com
-- **Tailwind CSS:** https://tailwindcss.com
-- **Elden Ring Content:** FromSoftware / Bandai Namco
-- **Google Fonts (Cinzel):** https://fonts.google.com
-- **Boss afbeeldingen:** Elden Ring Wiki / FromSoftware
-- **Inspiratie design:** Elden Ring game UI
-- **extra's:** claude.ai/chatgpt
-- **laatste check:** https://gemini.google.com/share/b3981aaff0fb
+Laravel Framework: https://laravel.com  
+Tailwind CSS: https://tailwindcss.com  
+Inertia.js: https://inertiajs.com  
+Google Fonts (Cinzel): https://fonts.google.com  
+Elden Ring content, boss-afbeeldingen en game UI inspiratie: FromSoftware / Bandai Namco Entertainment  
+Aanvullende ondersteuning bij ontwikkeling: claude.ai en gemini.google.com
+
 ## Ontwikkelaar
 
-- **Naam:** Arnaud Raspe
-- **School:** Erasmushogeschool Brussel
-- **Vak:** backend web
-- **Jaar:** 2024-2025
+Arnaud Raspe  
+Erasmushogeschool Brussel  
+Backend Web Development, 2024-2025
 
 ## Licentie
 
-Dit is een educatief project. Elden Ring is eigendom van FromSoftware en Bandai Namco Entertainment.
+Dit project staat onder MIT-licentie. Zie `LICENSE` voor de volledige tekst. Elden Ring is een geregistreerd handelsmerk van FromSoftware en Bandai Namco Entertainment. Game-content wordt enkel gebruikt voor educatieve doeleinden.
