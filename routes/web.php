@@ -28,8 +28,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/settings/profile', [ProfileController::class, 'destroy'])->name('settings.profile.destroy');
 });
 
-Route::middleware(['auth','admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::resource('users',UserController::class);
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::resource('users', UserController::class);
 });
 
 Route::get('/profile/{user}', [ProfilePageController::class, 'show'])->name('profile.show');
@@ -45,14 +45,18 @@ Route::get('/news/{news}', [NewsController::class, 'show'])->name('news.show');
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::resource('news', AdminNewsController::class);
 });
+
 Route::get('/faq', [FaqController::class, 'index'])->name('faq.index');
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::resource('faq-categories', FaqCategoryController::class);
     Route::resource('faqs', FaqAdminController::class);
 });
+
 Route::get('/contact', [ContactController::class, 'index'])->name('contact.index');
-Route::post('/contact', [ContactController::class, 'submit'])->name('contact.submit');
+Route::post('/contact', [ContactController::class, 'submit'])
+    ->middleware('throttle:3,1')
+    ->name('contact.submit');
 
 Route::get('/bosses', [BossController::class, 'index'])->name('bosses.index');
 Route::get('/bosses/{boss}', [BossController::class, 'show'])->name('bosses.show');
@@ -60,29 +64,13 @@ Route::get('/bosses/{boss}', [BossController::class, 'show'])->name('bosses.show
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::resource('bosses', \App\Http\Controllers\Admin\BossController::class);
 });
-Route::get('/debug-bosses', function() {
-    $bosses = \App\Models\Boss::all();
 
-    echo "<h1>Boss Debug</h1>";
-    echo "<pre>";
-    foreach($bosses as $boss) {
-        echo "Boss: {$boss->name}\n";
-        echo "Difficulty value: " . var_export($boss->difficulty, true) . "\n";
-        echo "Difficulty type: " . gettype($boss->difficulty) . "\n";
-        echo "Difficulty (int cast): " . (int)$boss->difficulty . "\n";
-        echo "Raw attributes: " . json_encode($boss->getAttributes()) . "\n";
-        echo "---\n\n";
-    }
-    echo "</pre>";
-
-    return '';
-})->middleware(['auth', 'admin']);
-
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'throttle:10,1'])->group(function () {
     Route::post('/news/{news}/comments', [CommentController::class, 'store'])->name('comments.store');
     Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])->name('comments.destroy');
 });
-Route::middleware('auth')->group(function () {
+
+Route::middleware(['auth', 'throttle:30,1'])->group(function () {
     Route::post('/bosses/{boss}/favorite', [FavoriteBossController::class, 'toggle'])->name('bosses.favorite.toggle');
     Route::get('/favorites', [FavoriteBossController::class, 'index'])->name('favorites.index');
 });
